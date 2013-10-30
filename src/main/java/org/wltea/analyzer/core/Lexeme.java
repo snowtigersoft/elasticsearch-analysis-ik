@@ -52,14 +52,18 @@ public class Lexeme implements Comparable<Lexeme>{
 	
 	//词元的起始位移
 	private int offset;
-    //词元的相对起始位置
-    private int begin;
-    //词元的长度
-    private int length;
-    //词元文本
-    private String lexemeText;
-    //词元类型
-    private int lexemeType;
+  //词元的相对起始位置
+  private int begin;
+  //词元的长度
+  private int length;
+  //词元文本
+  private String lexemeText;
+  //词元类型
+  private int lexemeType;
+  // 已合并的词元
+  private boolean isCompound;
+  // 跳过的词元
+  private boolean isSkip;
     
     
 	public Lexeme(int offset , int begin , int length , int lexemeType){
@@ -70,7 +74,25 @@ public class Lexeme implements Comparable<Lexeme>{
 		}
 		this.length = length;
 		this.lexemeType = lexemeType;
+    this.isCompound = false;
+    this.isSkip = false;
 	}
+
+  public boolean isCompound() {
+    return isCompound;
+  }
+
+  public void setCompound(boolean isCompound) {
+    this.isCompound = isCompound;
+  }
+
+  public boolean isSkip() {
+    return isSkip;
+  }
+
+  public void setSkip(boolean isSkip) {
+    this.isSkip = isSkip;
+  }
 	
     /*
      * 判断词元相等算法

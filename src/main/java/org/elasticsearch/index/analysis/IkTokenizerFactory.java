@@ -13,20 +13,20 @@ import java.io.Reader;
 
 public class IkTokenizerFactory extends AbstractTokenizerFactory {
   private boolean useSmart = false;
+  private final boolean mergeSingleChar;
 
   @Inject
   public IkTokenizerFactory(Index index,@IndexSettings Settings indexSettings,@Assisted String name, @Assisted Settings settings) {
     super(index, indexSettings, name, settings);
     Dictionary.getInstance().Init(indexSettings);
 
-    if (settings.get("use_smart", "true").equals("true")) {
-      useSmart = true;
-    }
+    useSmart = settings.getAsBoolean("use_smart", false);
+    mergeSingleChar = settings.getAsBoolean("merge_single_char", false);
   }
 
   @Override
   public Tokenizer create(Reader reader) {
-    return new IKTokenizer(reader, useSmart);
+    return new IKTokenizer(reader, useSmart, mergeSingleChar);
   }
 
 }

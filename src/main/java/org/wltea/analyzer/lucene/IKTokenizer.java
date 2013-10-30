@@ -68,6 +68,19 @@ public final class IKTokenizer extends Tokenizer {
 		_IKImplement = new IKSegmenter(input , useSmart);
 	}
 
+  /**
+   * Lucene 4.0 Tokenizer适配器类构造函数
+   * @param in
+   * @param useSmart
+   */
+  public IKTokenizer(Reader in , boolean useSmart , boolean mergeSingleChar){
+    super(in);
+    offsetAtt = addAttribute(OffsetAttribute.class);
+    termAtt = addAttribute(CharTermAttribute.class);
+    typeAtt = addAttribute(TypeAttribute.class);
+    _IKImplement = new IKSegmenter(input , useSmart, mergeSingleChar);
+  }
+
 	/* (non-Javadoc)
 	 * @see org.apache.lucene.analysis.TokenStream#incrementToken()
 	 */

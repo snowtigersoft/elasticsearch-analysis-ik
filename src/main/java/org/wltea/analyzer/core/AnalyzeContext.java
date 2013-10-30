@@ -24,16 +24,11 @@
  */
 package org.wltea.analyzer.core;
 
+import org.wltea.analyzer.dic.Dictionary;
+
 import java.io.IOException;
 import java.io.Reader;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Set;
-
-import org.wltea.analyzer.cfg.Configuration;
-import org.wltea.analyzer.dic.Dictionary;
+import java.util.*;
 
 /**
  * 
@@ -64,28 +59,40 @@ class AnalyzeContext {
 
 	
 	//子分词器锁
-    //该集合非空，说明有子分词器在占用segmentBuff
-    private Set<String> buffLocker;
-    
-    //原始分词结果集合，未经歧义处理
-    private QuickSortSet orgLexemes;    
-    //LexemePath位置索引表
-    private Map<Integer , LexemePath> pathMap;    
-    //最终分词结果集
-    private LinkedList<Lexeme> results;
-    private boolean useSmart;
-	//分词器配置项
-//	private Configuration cfg;
+  //该集合非空，说明有子分词器在占用segmentBuff
+  private Set<String> buffLocker;
 
-    public AnalyzeContext(boolean useSmart){
-        this.useSmart = useSmart;
-    	this.segmentBuff = new char[BUFF_SIZE];
-    	this.charTypes = new int[BUFF_SIZE];
-    	this.buffLocker = new HashSet<String>();
-    	this.orgLexemes = new QuickSortSet();
-    	this.pathMap = new HashMap<Integer , LexemePath>();    	
-    	this.results = new LinkedList<Lexeme>();
-    }
+  //原始分词结果集合，未经歧义处理
+  private QuickSortSet orgLexemes;
+  //LexemePath位置索引表
+  private Map<Integer , LexemePath> pathMap;
+  //最终分词结果集
+  private LinkedList<Lexeme> results;
+  private boolean useSmart;
+  private boolean mergeSingleChar;
+	//分词器配置项
+  //	private Configuration cfg;
+
+  public AnalyzeContext(boolean useSmart){
+    this.useSmart = useSmart;
+    this.segmentBuff = new char[BUFF_SIZE];
+    this.charTypes = new int[BUFF_SIZE];
+    this.buffLocker = new HashSet<String>();
+    this.orgLexemes = new QuickSortSet();
+    this.pathMap = new HashMap<Integer , LexemePath>();
+    this.results = new LinkedList<Lexeme>();
+  }
+
+  public AnalyzeContext(boolean useSmart, boolean mergeSingleChar) {
+    this.useSmart = useSmart;
+    this.mergeSingleChar = mergeSingleChar;
+    this.segmentBuff = new char[BUFF_SIZE];
+    this.charTypes = new int[BUFF_SIZE];
+    this.buffLocker = new HashSet<String>();
+    this.orgLexemes = new QuickSortSet();
+    this.pathMap = new HashMap<Integer, LexemePath>();
+    this.results = new LinkedList<Lexeme>();
+  }
     
     int getCursor(){
     	return this.cursor;
@@ -316,16 +323,17 @@ class AnalyzeContext {
 		//从结果集取出，并移除第一个Lexme
 		Lexeme result = this.results.pollFirst();
 		while(result != null){
-    		//数量词合并
-    		this.compound(result);
-    		if(Dictionary.getSingleton().isStopWord(this.segmentBuff ,  result.getBegin() , result.getLength())){
-       			//是停止词继续取列表的下一个
-    			result = this.results.pollFirst(); 				
-    		}else{
-	 			//不是停止词, 生成lexeme的词元文本,输出
-	    		result.setLexemeText(String.valueOf(segmentBuff , result.getBegin() , result.getLength()));
-	    		break;
-    		}
+      //数量词合并
+      this.compound(result);
+      this.compoundSingleChar(result);
+      if(Dictionary.getSingleton().isStopWord(this.segmentBuff ,  result.getBegin() , result.getLength())){
+          //是停止词继续取列表的下一个
+        result = this.results.pollFirst();
+      }else{
+      //不是停止词, 生成lexeme的词元文本,输出
+        result.setLexemeText(String.valueOf(segmentBuff , result.getBegin() , result.getLength()));
+        break;
+      }
 		}
 		return result;
 	}
@@ -388,5 +396,52 @@ class AnalyzeContext {
 
 		}
 	}
+
+  /**
+   * 组合单个词元
+   * 单个字将会分别合并到前后词元中
+   */
+  private void compoundSingleChar(Lexeme result) {
+    if (!this.mergeSingleChar) {
+      return;
+    }
+
+    // 处理尾部为单字
+    if (this.results.isEmpty()) {
+      if (result.getLength() == 1) {
+        result.setSkip(true);
+      }
+    }
+
+    // 数量词和单字合并处理
+    if (!result.isCompound() && !this.results.isEmpty()) {
+
+      Lexeme nextLexeme = this.results.peekFirst();
+      if (result.getLength() == 1) {
+        // 合并单字 + Next
+        if (result.getEndPosition() < nextLexeme.getBeginPosition()) { // 符号跳过当前单字
+          result.setSkip(true);
+        } else {
+          result.append(nextLexeme, Lexeme.TYPE_CNWORD);
+        }
+      } else {
+        // 合并下一个单字且不为符号
+        if (nextLexeme.getLength() == 1
+            && result.getEndPosition() >= nextLexeme
+            .getBeginPosition()) {
+          // (int offset , int begin , int length , int
+          // lexemeType){
+          Lexeme newLexeme = new Lexeme(result.getOffset(),
+              result.getBegin(), result.getLength(),
+              result.getLexemeType());
+          newLexeme.setCompound(true);
+          newLexeme.append(nextLexeme, Lexeme.TYPE_CNWORD);
+          this.results.addFirst(newLexeme);
+        }
+
+      }
+
+    }
+  }
 	
 }

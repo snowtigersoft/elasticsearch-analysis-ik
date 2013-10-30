@@ -30,7 +30,7 @@ import java.util.List;
 
 import org.wltea.analyzer.cfg.Configuration;
 //import org.wltea.analyzer.cfg.DefaultConfig;
-import org.wltea.analyzer.dic.Dictionary;
+
 
 /**
  * IK分词器主类
@@ -48,7 +48,8 @@ public final class IKSegmenter {
 	private List<ISegmenter> segmenters;
 	//分词歧义裁决器
 	private IKArbitrator arbitrator;
-    private  boolean useSmart = false;
+  private  boolean useSmart = false;
+  private boolean mergeSingleChar;
 	
 
 	/**
@@ -77,6 +78,14 @@ public final class IKSegmenter {
 		this.cfg = cfg;
 		this.init();
 	}
+
+
+  public IKSegmenter(Reader input , boolean useSmart, boolean mergeSingleChar){
+    this.input = input;
+    this.useSmart=useSmart;
+    this.mergeSingleChar = mergeSingleChar;
+    this.init();
+  }
 	
 	/**
 	 * 初始化
@@ -86,7 +95,7 @@ public final class IKSegmenter {
 //		Dictionary.initial(this.cfg);
 //        Dictionary.getSingleton();
 		//初始化分词上下文
-		this.context = new AnalyzeContext(useSmart);
+    this.context = new AnalyzeContext(useSmart, mergeSingleChar);
 		//加载子分词器
 		this.segmenters = this.loadSegmenters();
 		//加载歧义裁决器
